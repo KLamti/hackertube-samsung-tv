@@ -1,0 +1,16 @@
+dist/
+*.wgt
+*.tpk
+*.p12
+*.pfx
+*.pem
+*.key
+author-signature.xml
+signature1.xml
+.manifest.tmp
+.delta.lst
+.env
+.env.*
+.DS_Store
+__pycache__/
+*.pyc

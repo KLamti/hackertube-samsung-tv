@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920">
+  <title>HackerTube</title>
+  <link rel="icon" href="img/icon.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <aside class="rail">
+    <div class="brand"><span class="brand-icon">H</span><span>HackerTube</span></div>
+    <nav aria-label="Main navigation">
+      <button data-page="home"><span class="nav-icon">⌂</span>Home</button>
+      <button data-page="search"><span class="nav-icon">⌕</span>Search</button>
+      <button data-page="topics"><span class="nav-icon">▦</span>Topics</button>
+      <button data-page="longs"><span class="nav-icon">◷</span>Long videos</button>
+      <div class="nav-divider"></div>
+      <button data-page="saved"><span class="nav-icon">＋</span>Watch later</button>
+      <button data-page="history"><span class="nav-icon">↶</span>History</button>
+    </nav>
+    <div class="rail-note">Curated by conversations.<br>Recommended on Hacker News.</div>
+  </aside>
+  <main id="main">
+    <header><div><h1 id="heading">Worth your time.</h1><p id="subtitle">Talks, ideas and rabbit holes that stayed with people.</p></div><span id="clock"></span></header>
+    <section id="content" aria-live="polite"><p class="status">Loading videos…</p></section>
+  </main>
+  <footer id="hint"><span><b>↑ ↓ ← →</b> Browse</span><span><b>OK</b> Details</span><span><b>Back</b> Navigation</span></footer>
+  <div id="overlay" hidden></div>
+  <div id="toast" role="status" hidden></div>
+  <script src="js/core.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/tizen.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
