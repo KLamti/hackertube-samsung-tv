@@ -10,7 +10,7 @@ APP = ROOT / 'hackertube'
 # Explicit file list keeps local signing artifacts and credentials out of releases.
 FILES = [
     'index.html', 'config.xml', 'css/app.css', 'js/core.js', 'js/api.js',
-    'js/tizen.js', 'js/main.js', 'img/icon.png', 'fonts/InterVariable.woff2',
+    'js/tizen.js', 'js/player.js', 'js/main.js', 'img/icon.png', 'fonts/InterVariable.woff2',
     'fonts/OFL.txt',
 ]
 version = ET.parse(APP / 'config.xml').getroot().attrib['version']

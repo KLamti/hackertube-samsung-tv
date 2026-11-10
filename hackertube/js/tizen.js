@@ -27,7 +27,7 @@
     }
     return {
       play: function (id) { return play(id, false); }, browser: function (id) { return play(id, true); },
-      register: function () { if (platform) ['MediaPlayPause', 'MediaPlay', 'ColorF0Red'].forEach(function (key) {
+      register: function () { if (platform) ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop', 'ColorF0Red'].forEach(function (key) {
         try { platform.tvinputdevice.registerKey(key); } catch (_) {}
       }); },
       exit: function () { if (platform) { try { platform.application.getCurrentApplication().exit(); } catch (_) {} } }

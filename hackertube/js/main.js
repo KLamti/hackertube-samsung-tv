@@ -7,7 +7,7 @@
   var storage; try { storage = window.localStorage; } catch (_) { storage = null; }
   var store = H.createStore(storage), content = $('#content'), overlay = $('#overlay');
   var page = {kind:'home',offset:0,seed:Math.floor(Math.random()*100000)}, generation = 0;
-  var videos = [], detail = null, parentSnapshot = null, lastFocus = null, overlayFocus = null, toastTimer;
+  var videos = [], detail = null, parentSnapshot = null, lastFocus = null, overlayFocus = null, toastTimer, embedded = null;
   var pages = {
     home:['Worth your time.', 'Talks, ideas and rabbit holes that stayed with people.'],
     search:['Find your next rabbit hole.', 'Search titles, ideas and topics.'],
@@ -105,9 +105,9 @@
     $('#heading').textContent = 'A closer look.'; $('#subtitle').textContent = 'A good recommendation deserves a little context.';
     content.scrollTop = 0;
     content.innerHTML = '<div class="detail-back">'+button('‹ Back to videos','back')+'</div><article class="detail">'+
-      '<div>'+thumbnail(video,'detail-image')+'<p class="detail-side">From <strong>HackerTube</strong><br>Videos recommended in Hacker News conversations.</p><p class="detail-side">Playback opens YouTube. Reopen HackerTube from your launcher to return to this list.</p></div>'+
+      '<div>'+thumbnail(video,'detail-image')+'<p class="detail-side">From <strong>HackerTube</strong><br>Videos recommended in Hacker News conversations.</p><p class="detail-side">Choose Play here to stay in HackerTube, or open the video in the YouTube app.</p></div>'+
       '<div><h2>'+esc(video.title)+'</h2><div class="detail-meta">'+esc(video.channel)+' · '+esc(H.duration(video.duration_s))+'</div>'+
-      '<div class="detail-actions">'+button('▶ Watch on YouTube','play','primary','id="play"')+button(store.has(video.vid)?'✓ Saved':'＋ Watch later','save','','id="save"')+'</div>'+
+      '<div class="detail-actions">'+button('▶ Play here','embedded','primary','id="play"')+button('Open in YouTube','play','','id="youtube"')+button(store.has(video.vid)?'✓ Saved':'＋ Watch later','save','','id="save"')+'</div>'+
       '<p class="error" id="play-error" hidden></p><p class="summary" id="summary">'+esc(video.summary || 'Loading description…')+'</p>'+
       '<p class="why" id="why">'+esc(video.why_hn || video.reason || 'Recommended on Hacker News.')+'</p>'+
       '<div class="detail-actions">'+button('Open in TV browser','browser')+'</div></div></article>';
@@ -121,6 +121,7 @@
     });
   }
   function closeOverlay() {
+    if (embedded) { embedded.close(); embedded = null; }
     overlay.hidden = true; overlay.innerHTML = '';
     focus(overlayFocus && overlayFocus.isConnected ? overlayFocus : $('nav button.active'));
   }
@@ -128,6 +129,28 @@
     overlayFocus = document.activeElement; overlay.innerHTML = html; overlay.hidden = false;
     focus(overlay.querySelector('button'));
   }
+  function playHere() {
+    if (!detail) return;
+    var video = detail;
+    remember();
+    openOverlay('<section class="player-view" role="dialog" aria-modal="true" aria-label="Video player">'+
+      '<iframe id="player-frame" title="YouTube video player" allow="autoplay; encrypted-media; fullscreen" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe>'+
+      '<button id="player-remote" aria-label="Video controls: OK to pause or resume, left and right to seek, up for player buttons"></button>'+
+      '<div class="player-bar"><div class="player-info"><strong>'+esc(video.title)+'</strong><span id="player-status" role="status">Loading player…</span></div>'+
+      '<div class="player-actions">'+button('Pause / Resume','player-toggle','','id="player-toggle"')+button('Open in YouTube','player-youtube','','id="player-youtube"')+button('Back to details','cancel')+'</div>'+
+      '<p class="player-hints">OK: Pause / Resume · ← / →: Seek 10 seconds · ↑ / ↓: Player buttons · Back: Details</p></div></section>');
+    var session = H.createEmbeddedPlayer($('#player-frame'), function (state) {
+      var label = $('#player-status'); if (!label) return;
+      label.textContent = state.message;
+      label.classList.toggle('error', state.kind === 'error');
+      $('#player-toggle').textContent = state.kind === 'playing' ? 'Pause' : state.kind === 'paused' || state.kind === 'ended' || state.kind === 'ready' ? 'Play' : 'Pause / Resume';
+      if (state.kind === 'error') focus($('#player-youtube'));
+    }, function () { store.seen(video); });
+    embedded = session;
+    session.open(video.vid);
+    focus($('#player-remote'));
+  }
+  window.addEventListener('message', function (e) { if (embedded) embedded.receive(e); });
   function search() {
     var keys = 'abcdefghijklmnopqrstuvwxyz0123456789-+?'.split('');
     openOverlay('<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="search-title"><h2 id="search-title">Find something worth watching.</h2>'+
@@ -189,6 +212,9 @@
       case 'delete': $('#query').value=$('#query').value.slice(0,-1); break;
       case 'clear': $('#query').value=''; break;
       case 'save': if(detail) { var saved=store.toggle(detail); el.textContent=saved?'✓ Saved':'＋ Watch later'; toast(saved?'Saved to Watch later.':'Removed from Watch later.'); } break;
+      case 'embedded': playHere(); break;
+      case 'player-toggle': if (embedded) embedded.command('toggle'); break;
+      case 'player-youtube': closeOverlay(); launch(false); break;
       case 'play': launch(false); break;
       case 'browser': launch(true); break;
     }
@@ -196,24 +222,33 @@
   document.addEventListener('keydown', function (e) {
     var code = e.keyCode, active = document.activeElement;
     if (code === 10009 || code === 27) { e.preventDefault(); back(); return; }
+    if (embedded) {
+      var command = {415:'play',19:'pause',10252:'toggle',413:'stop'}[code];
+      if (command) { e.preventDefault(); embedded.command(command); return; }
+      if (active && active.id === 'player-remote') {
+        command = {13:'toggle',32:'toggle',37:'backward',39:'forward'}[code];
+        if (command) { e.preventDefault(); embedded.command(command); return; }
+        if (code === 38 || code === 40) { e.preventDefault(); focus($('#player-toggle')); return; }
+      } else if (code === 38 || code === 40) { e.preventDefault(); focus($('#player-remote')); return; }
+    }
     if (active && active.tagName === 'INPUT') {
       if (code === 13) { e.preventDefault(); $('[data-action="submit-search"]').click(); }
       else if (code === 40) { e.preventDefault(); focus(overlay.querySelector('.key')); }
       return;
     }
     if (code === 13) { e.preventDefault(); if (active && active.tagName === 'BUTTON') active.click(); return; }
-    if (code === 415 || code === 10252) { e.preventDefault(); if (overlay.hidden && detail) launch(false); return; }
+    if (code === 415 || code === 10252) { e.preventDefault(); if (overlay.hidden && detail) { if (active && active.dataset.action === 'play') launch(false); else playHere(); } return; }
     if (code === 403 || e.key === '/') { e.preventDefault(); if (overlay.hidden) search(); return; }
     var direction = {37:'left',38:'up',39:'right',40:'down'}[code];
     if (!direction) return;
     e.preventDefault();
     var root = overlay.hidden ? document : overlay;
-    var els = Array.prototype.slice.call(root.querySelectorAll('button:not(:disabled),input')).filter(function (b) { return b.getClientRects().length && !b.closest('[hidden]'); });
+    var els = Array.prototype.slice.call(root.querySelectorAll('button:not(:disabled),input')).filter(function (b) { return b.id !== 'player-remote' && b.getClientRects().length && !b.closest('[hidden]'); });
     var rects = els.map(function (b) { var r=b.getBoundingClientRect(); return {x:r.left,y:r.top,w:r.width,h:r.height}; });
     focus(els[H.moveFocus(rects,els.indexOf(active),direction)]);
   });
   document.addEventListener('focusin', function (e) { if(overlay.hidden) lastFocus=e.target; });
-  document.addEventListener('visibilitychange',function () { if(document.hidden) remember(); else if(overlay.hidden) focus(lastFocus && lastFocus.isConnected ? lastFocus : $('nav button.active')); });
+  document.addEventListener('visibilitychange',function () { if(document.hidden) { remember(); if(embedded) embedded.command('pause'); } else if(embedded) focus($('#player-remote')); else if(overlay.hidden) focus(lastFocus && lastFocus.isConnected ? lastFocus : $('nav button.active')); });
   document.addEventListener('error',function (e) {
     var img=e.target; if(img.tagName!=='IMG'||!H.validId(img.dataset.videoImage))return;
     if(img.src.indexOf('/hq2.jpg')>=0)img.src='https://i.ytimg.com/vi/'+img.dataset.videoImage+'/hqdefault.jpg';

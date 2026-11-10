@@ -34,6 +34,13 @@ try{
  await key(38,'ArrowUp');assert.equal(await evaluate('document.activeElement.id'),second);
  await key(13,'Enter');await until('!!document.querySelector("#play")');
  assert.equal(await evaluate('document.activeElement.id'),'play');await shot('detail');
+ await key(13,'Enter');await until('!!document.querySelector("#player-frame")');
+ assert.equal(await evaluate('document.activeElement.id'),'player-remote');
+ await key(38,'ArrowUp');assert.equal(await evaluate('document.activeElement.id'),'player-toggle');
+ await key(39,'ArrowRight');assert.equal(await evaluate('document.activeElement.id'),'player-youtube');
+ await key(27,'Escape');assert.equal(await evaluate('document.querySelector("#player-frame")'),null);
+ assert.equal(await evaluate('document.activeElement.id'),'play');
+ await key(39,'ArrowRight');assert.equal(await evaluate('document.activeElement.id'),'youtube');
  await key(39,'ArrowRight');assert.equal(await evaluate('document.activeElement.id'),'save');await key(13,'Enter');
  assert.match(await evaluate('document.querySelector("#save").textContent'),/Saved/);
  await key(27,'Escape');assert.equal(await evaluate('document.activeElement.id'),second);
